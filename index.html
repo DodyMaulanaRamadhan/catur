@@ -109,7 +109,7 @@
     <script>
         // --- Inisialisasi Variabel Global ---
         var board = null;
-        var game = new Chess();
+        var game = null;
         var $status = $('#status');
         var $fen = $('#fen-display');
         var $gameMode = $('#gameMode');
@@ -205,50 +205,64 @@
             updateStatus();
         }
 
-        // --- Konfigurasi Papan (Chessboard.js) ---
-        var config = {
-            draggable: true,
-            position: 'start',
-            onDragStart: onDragStart,
-            onDrop: onDrop,
-            onSnapEnd: onSnapEnd,
-            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
-        };
-        
-        board = Chessboard('myBoard', config);
-        updateStatus();
-
-        // --- Event Listeners untuk UI ---
-
-        // Toggle Difficulty Selector berdasarkan Mode
-        $gameMode.on('change', function() {
-            if ($(this).val() === 'ai') {
-                $difficultyContainer.slideDown();
-                aiEnabled = true;
-            } else {
-                $difficultyContainer.slideUp();
-                aiEnabled = false;
-            }
-            // Reset game saat ganti mode agar adil
-            startNewGame();
-        });
-
-        // Tombol Mulai Baru
-        $('#startBtn').on('click', startNewGame);
-
+        // --- Fungsi untuk Mulai Game Baru ---
         function startNewGame() {
-            game.reset();
-            board.start();
+            console.log('Starting new game...');
+            game = new Chess();
+            board.position('start');
             aiEnabled = ($gameMode.val() === 'ai');
             updateStatus();
+            console.log('Game started. AI enabled:', aiEnabled);
         }
 
-        // Tombol Flip Papan
-        $('#flipBtn').on('click', board.flip);
+        // --- Inisialisasi saat DOM Ready ---
+        $(document).ready(function() {
+            console.log('DOM Ready, initializing chessboard...');
+            
+            // --- Konfigurasi Papan (Chessboard.js) ---
+            var config = {
+                draggable: true,
+                position: 'start',
+                onDragStart: onDragStart,
+                onDrop: onDrop,
+                onSnapEnd: onSnapEnd,
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+            };
+            
+            board = Chessboard('myBoard', config);
+            game = new Chess();
+            updateStatus();
+            
+            console.log('Chessboard initialized successfully');
 
-        // Handle Resize Window agar papan responsif
-        $(window).resize(board.resize);
+            // --- Event Listeners untuk UI ---
 
+            // Toggle Difficulty Selector berdasarkan Mode
+            $gameMode.on('change', function() {
+                if ($(this).val() === 'ai') {
+                    $difficultyContainer.slideDown();
+                    aiEnabled = true;
+                } else {
+                    $difficultyContainer.slideUp();
+                    aiEnabled = false;
+                }
+                // Reset game saat ganti mode agar adil
+                startNewGame();
+            });
+
+            // Tombol Mulai Baru
+            $('#startBtn').on('click', startNewGame);
+
+            // Tombol Flip Papan
+            $('#flipBtn').on('click', function() {
+                board.flip();
+            });
+
+            // Handle Resize Window agar papan responsif
+            $(window).resize(function() {
+                board.resize();
+            });
+        });
     </script>
 </body>
 </html>
