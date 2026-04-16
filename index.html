@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Chess - Web Catur Pro</title>
+    
+    <!-- Tailwind CSS untuk Styling Cepat & Elegan -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chessboard.js CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css" integrity="sha384-q94+BZtLrkL1/ohfjR8c6L+A6qzNH9R2hBLwyoAfu3i/WCvQjzL2RQJ3uNHDISdU" crossorigin="anonymous">
+
+    <style>
+        /* Custom Styles untuk nuansa lebih baik */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a202c; /* Dark Blue/Gray */
+            color: #e2e8f0;
+        }
+        #myBoard {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .highlight-white {
+            box-shadow: inset 0 0 3px 3px yellow;
+        }
+        .highlight-black {
+            box-shadow: inset 0 0 3px 3px blue;
+        }
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            #myBoard {
+                max-width: 90vw;
+            }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center min-h-screen py-8">
+
+    <!-- Header -->
+    <header class="mb-6 text-center">
+        <h1 class="text-4xl font-bold text-yellow-500 mb-2">♟️ Master Chess</h1>
+        <p class="text-gray-400">Web Catur Profesional dengan AI Stockfish</p>
+    </header>
+
+    <!-- Menu Kontrol -->
+    <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-[600px] mb-6 border border-gray-700">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+            
+            <!-- Pilihan Mode -->
+            <div class="flex flex-col w-full md:w-auto">
+                <label class="text-sm text-gray-400 mb-1">Mode Permainan</label>
+                <select id="gameMode" class="bg-gray-700 text-white p-2 rounded border border-gray-600 focus:outline-none focus:border-yellow-500">
+                    <option value="pvp">Player vs Player (Lokal)</option>
+                    <option value="ai">Player vs Bot (AI)</option>
+                </select>
+            </div>
+
+            <!-- Pilihan Kesulitan (Hanya aktif jika mode AI) -->
+            <div class="flex flex-col w-full md:w-auto" id="difficultyContainer" style="display:none;">
+                <label class="text-sm text-gray-400 mb-1">Tingkat Kesulitan (ELO)</label>
+                <select id="difficulty" class="bg-gray-700 text-white p-2 rounded border border-gray-600 focus:outline-none focus:border-yellow-500">
+                    <option value="1200">🟢 Mudah (1200)</option>
+                    <option value="1800">🟡 Sedang (1800)</option>
+                    <option value="2200">🔴 Susah (2200)</option>
+                    <option value="3200">🔥 Mahir (3200 - Grandmaster)</option>
+                </select>
+            </div>
+
+            <!-- Tombol Aksi -->
+            <div class="flex gap-2 w-full md:w-auto">
+                <button id="startBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-200 flex-1 md:flex-none">
+                    Mulai Baru
+                </button>
+                <button id="flipBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200 flex-1 md:flex-none">
+                    Balik Papan
+                </button>
+            </div>
+        </div>
+        
+        <!-- Status Game -->
+        <div class="mt-4 pt-4 border-t border-gray-700 flex justify-between items-center">
+            <div id="status" class="text-lg font-semibold text-yellow-400">Giliran: Putih</div>
+            <div id="fen-display" class="text-xs text-gray-500 hidden md:block truncate w-1/2 ml-4"></div>
+        </div>
+    </div>
+
+    <!-- Area Papan Catur -->
+    <div id="myBoard"></div>
+
+    <!-- Footer / Info -->
+    <footer class="mt-8 text-center text-gray-500 text-sm">
+        <p>Dibuat dengan HTML, CSS, JS & Stockfish Engine.</p>
+    </footer>
+
+    <!-- Libraries -->
+    <!-- jQuery (Dibutuhkan oleh Chessboard.js) -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script>
+    <!-- Chessboard.js (UI Papan) -->
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js" integrity="sha384-8Vi8XRmehGv+8zdO91DK5IfILxvkYh2OHChBy3sMzXBizxfS2r96y0g8I49k/50T" crossorigin="anonymous"></script>
+    <!-- Chess.js (Logika Aturan Catur) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js" integrity="sha512-xRllwz3ikqBCkg7YGC/JjObU0yRqVW7bQ9v0K3n1vPSC7471Kx7bE8Jn/A2E2l9B5311151qX1111111111111" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- Note: Versi chess.js di atas mungkin agak lama, kita gunakan versi yang lebih stabil via unpkg jika perlu, tapi cdnjs biasanya oke. 
+         Jika error, kita ganti ke: https://unpkg.com/chess.js@0.10.2/chess.js -->
+    <script src="https://unpkg.com/chess.js@0.10.2/chess.js"></script>
+
+    <script>
+        // --- Inisialisasi Variabel Global ---
+        var board = null;
+        var game = new Chess();
+        var $status = $('#status');
+        var $fen = $('#fen-display');
+        var $gameMode = $('#gameMode');
+        var $difficultyContainer = $('#difficultyContainer');
+        var $difficulty = $('#difficulty');
+        
+        // Konfigurasi AI (Akan diimplementasikan penuh di Fase 3)
+        var aiEnabled = false;
+        var aiDepth = 1; // Default depth
+        
+        // --- Fungsi Logika Game ---
+
+        function onDragStart (source, piece, position, orientation) {
+            // Jangan izinkan pengambilan bidak jika game over
+            if (game.game_over()) return false;
+
+            // Hanya izinkan pemain mengambil bidak sesuai gilirannya
+            // Kecuali mode PvP, kita bebas ambil apa saja yang sesuai giliran warna
+            if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
+                (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+                return false;
+            }
+
+            // Jika mode AI dan giliran bot, jangan biarkan user menggerakkan bidak
+            if (aiEnabled && game.turn() === 'b') {
+                return false;
+            }
+        }
+
+        function onDrop (source, target) {
+            // Cek apakah gerakan legal
+            var move = game.move({
+                from: source,
+                to: target,
+                promotion: 'q' // PROMOTE SELALU KE RATU UNTUK KEMUDAHAN (Bisa dikembangkan nanti)
+            });
+
+            // Jika gerakan ilegal, kembalikan bidak (snapback)
+            if (move === null) return 'snapback';
+
+            updateStatus();
+            
+            // Jika mode AI aktif dan game belum selesai, trigger bot
+            if (aiEnabled && !game.game_over()) {
+                window.setTimeout(makeRandomMove, 250); // Placeholder untuk AI
+            }
+        }
+
+        function onSnapEnd () {
+            // Update posisi papan setelah castling, en passant, atau promotion
+            board.position(game.fen());
+        }
+
+        function updateStatus () {
+            var status = '';
+
+            var moveColor = 'Putih';
+            if (game.turn() === 'b') {
+                moveColor = 'Hitam';
+            }
+
+            // Cek Skakmat?
+            if (game.in_checkmate()) {
+                status = 'Game Over, ' + moveColor + ' terkena Skakmat.';
+            }
+            // Cek Remis?
+            else if (game.in_draw()) {
+                status = 'Game Over, Remis (Draw).';
+            }
+            // Game masih berlanjut
+            else {
+                status = 'Giliran: ' + moveColor;
+                // Cek Skak?
+                if (game.in_check()) {
+                    status += ', ' + moveColor + ' sedang di-Skak!';
+                }
+            }
+
+            $status.html(status);
+            $fen.html(game.fen());
+        }
+
+        // --- Fungsi Placeholder AI (Akan diganti dengan Stockfish di Fase 3) ---
+        function makeRandomMove () {
+            var possibleMoves = game.moves();
+
+            // Game over?
+            if (possibleMoves.length === 0) return;
+
+            var randomIdx = Math.floor(Math.random() * possibleMoves.length);
+            game.move(possibleMoves[randomIdx]);
+            board.position(game.fen());
+            updateStatus();
+        }
+
+        // --- Konfigurasi Papan (Chessboard.js) ---
+        var config = {
+            draggable: true,
+            position: 'start',
+            onDragStart: onDragStart,
+            onDrop: onDrop,
+            onSnapEnd: onSnapEnd,
+            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+        };
+        
+        board = Chessboard('myBoard', config);
+        updateStatus();
+
+        // --- Event Listeners untuk UI ---
+
+        // Toggle Difficulty Selector berdasarkan Mode
+        $gameMode.on('change', function() {
+            if ($(this).val() === 'ai') {
+                $difficultyContainer.slideDown();
+                aiEnabled = true;
+            } else {
+                $difficultyContainer.slideUp();
+                aiEnabled = false;
+            }
+            // Reset game saat ganti mode agar adil
+            startNewGame();
+        });
+
+        // Tombol Mulai Baru
+        $('#startBtn').on('click', startNewGame);
+
+        function startNewGame() {
+            game.reset();
+            board.start();
+            aiEnabled = ($gameMode.val() === 'ai');
+            updateStatus();
+        }
+
+        // Tombol Flip Papan
+        $('#flipBtn').on('click', board.flip);
+
+        // Handle Resize Window agar papan responsif
+        $(window).resize(board.resize);
+
+    </script>
+</body>
+</html>
